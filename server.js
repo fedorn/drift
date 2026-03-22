@@ -7,8 +7,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 
 const client = new OpenAI({
-  baseURL: "https://api.cerebras.ai/v1",
-  apiKey: process.env.CEREBRAS_API_KEY,
+  baseURL: "https://api.groq.com/openai/v1",
+  apiKey: process.env.GROQ_API_KEY,
 });
 
 const SYSTEM_PROMPT = `You are Drift — a generative space renderer. The user types anything into an address bar — a concept, a place, a feeling, a question, a memory, an abstract idea — and you render it as a rich, immersive visual HTML space.
@@ -46,7 +46,7 @@ app.post("/api/navigate", async (req, res) => {
       : `Generate the space for: ${destination}`;
 
     const stream = await client.chat.completions.create({
-      model: "qwen-3-235b-a22b-instruct-2507",
+      model: "moonshotai/kimi-k2-instruct-0905",
       max_tokens: 4096,
       stream: true,
       messages: [
