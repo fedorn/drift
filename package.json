@@ -1,0 +1,14 @@
+{
+  "name": "drift",
+  "version": "1.0.0",
+  "description": "Explore spaces generated from thought",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "openai": "^6.32.0"
+  }
+}

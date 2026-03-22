@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Drift</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0f;
+      color: #c8c8d8;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chrome {
+      background: rgba(12, 12, 20, 0.95);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      flex-shrink: 0;
+      backdrop-filter: blur(20px);
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      padding: 10px 16px;
+      gap: 8px;
+    }
+
+    .nav-btn {
+      background: none;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.4);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .nav-btn:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.2;
+      cursor: default;
+    }
+
+    .input-bar {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 0 16px;
+      height: 36px;
+      transition: all 0.3s;
+    }
+
+    .input-bar:focus-within {
+      border-color: rgba(160, 120, 255, 0.5);
+      background: rgba(255, 255, 255, 0.06);
+      box-shadow: 0 0 20px rgba(160, 120, 255, 0.1);
+    }
+
+    .input-bar input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      color: #e0e0f0;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .input-bar input::placeholder {
+      color: rgba(255, 255, 255, 0.2);
+    }
+
+    .loading-line {
+      height: 2px;
+      background: transparent;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .loading-line.active {
+      background: rgba(160, 120, 255, 0.1);
+    }
+
+    .loading-line.active::after {
+      content: '';
+      position: absolute;
+      left: -30%;
+      width: 30%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(160, 120, 255, 0.8), rgba(120, 200, 255, 0.8), transparent);
+      animation: drift-load 1.2s ease-in-out infinite;
+    }
+
+    @keyframes drift-load {
+      0% { left: -30%; }
+      100% { left: 100%; }
+    }
+
+    .content-area {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .page-frame {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: #0a0a0f;
+    }
+
+    /* Start page */
+    .start-page {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      background: radial-gradient(ellipse at 50% 40%, rgba(160, 120, 255, 0.08) 0%, #0a0a0f 70%);
+      text-align: center;
+      padding: 20px;
+    }
+
+    .start-page .logo {
+      font-size: 64px;
+      font-weight: 200;
+      letter-spacing: 12px;
+      color: rgba(200, 180, 255, 0.9);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+    }
+
+    .start-page .subtitle {
+      color: rgba(255, 255, 255, 0.25);
+      font-size: 15px;
+      font-weight: 300;
+      margin-bottom: 48px;
+      letter-spacing: 1px;
+    }
+
+    .seeds {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      max-width: 640px;
+      justify-content: center;
+    }
+
+    .seed {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 20px;
+      padding: 8px 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.4);
+      letter-spacing: 0.5px;
+    }
+
+    .seed:hover {
+      background: rgba(160, 120, 255, 0.1);
+      border-color: rgba(160, 120, 255, 0.3);
+      color: rgba(200, 180, 255, 0.9);
+      transform: translateY(-1px);
+    }
+
+    .status-bar {
+      background: rgba(12, 12, 20, 0.9);
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+      padding: 3px 16px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.25);
+      flex-shrink: 0;
+      display: flex;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+  <div class="chrome">
+    <div class="toolbar">
+      <button class="nav-btn" id="btn-back" disabled title="Back">&#9664;</button>
+      <button class="nav-btn" id="btn-forward" disabled title="Forward">&#9654;</button>
+      <button class="nav-btn" id="btn-home" title="Home">&#9673;</button>
+      <div class="input-bar">
+        <input type="text" id="input" placeholder="type a place, concept, feeling, question, memory..." autofocus>
+      </div>
+    </div>
+    <div class="loading-line" id="loading-line"></div>
+  </div>
+
+  <div class="content-area">
+    <div class="start-page" id="start-page">
+      <div class="logo">drift</div>
+      <div class="subtitle">explore spaces generated from thought</div>
+      <div class="seeds">
+        <div class="seed" data-dest="a library that remembers every book you almost read">a library of almost-read books</div>
+        <div class="seed" data-dest="the feeling of 3am when everyone else is asleep">3am solitude</div>
+        <div class="seed" data-dest="a map of all the places you've been in dreams">dream cartography</div>
+        <div class="seed" data-dest="what does music look like from the inside">inside of music</div>
+        <div class="seed" data-dest="a museum of obsolete futures — things we thought 2025 would look like">obsolete futures</div>
+        <div class="seed" data-dest="the space between two thoughts">between thoughts</div>
+        <div class="seed" data-dest="a marketplace where people trade memories">memory market</div>
+        <div class="seed" data-dest="the last page of the internet">the last page</div>
+      </div>
+    </div>
+    <iframe class="page-frame" id="page-frame" sandbox="allow-same-origin" style="display:none;"></iframe>
+  </div>
+
+  <div class="status-bar">
+    <span id="status-text">ready</span>
+    <span>drift v1.0</span>
+  </div>
+
+  <script>
+    const input = document.getElementById('input');
+    const pageFrame = document.getElementById('page-frame');
+    const startPage = document.getElementById('start-page');
+    const loadingLine = document.getElementById('loading-line');
+    const btnBack = document.getElementById('btn-back');
+    const btnForward = document.getElementById('btn-forward');
+    const statusText = document.getElementById('status-text');
+
+    let history = [];
+    let historyIndex = -1;
+    let currentDest = '';
+    let isLoading = false;
+
+    function updateNavButtons() {
+      btnBack.disabled = historyIndex <= 0;
+      btnForward.disabled = historyIndex >= history.length - 1;
+    }
+
+    async function navigate(destination, pushHistory = true) {
+      if (isLoading || !destination.trim()) return;
+      destination = destination.trim();
+
+      isLoading = true;
+      input.value = destination;
+      currentDest = destination;
+      document.title = `${destination} — Drift`;
+      loadingLine.classList.add('active');
+      statusText.textContent = 'entering space...';
+
+      if (pushHistory) {
+        history = history.slice(0, historyIndex + 1);
+        history.push(destination);
+        historyIndex = history.length - 1;
+        window.location.hash = destination;
+      }
+      updateNavButtons();
+
+      startPage.style.display = 'none';
+      pageFrame.style.display = 'block';
+
+      let html = '';
+      const origin = historyIndex > 0 ? history[historyIndex - 1] : null;
+
+      try {
+        const res = await fetch('/api/navigate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ destination, origin }),
+        });
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.error) throw new Error(data.error);
+              if (data.done) break;
+              if (data.html) {
+                html += data.html;
+                statusText.textContent = 'rendering...';
+              }
+            } catch (e) {
+              if (e.message && !e.message.includes('JSON')) throw e;
+            }
+          }
+
+          renderPage(html);
+        }
+      } catch (err) {
+        html = `<html><body style="font-family:sans-serif;padding:60px;background:#0a0a0f;color:#c8c8d8;text-align:center;">
+          <h1 style="color:rgba(160,120,255,0.7);font-weight:300;">Lost in the void</h1>
+          <p style="color:rgba(255,255,255,0.3);margin-top:16px;">Could not reach "${destination}"</p>
+          <p style="color:rgba(255,255,255,0.15);margin-top:8px;">${err.message}</p>
+        </body></html>`;
+      }
+
+      renderPage(html, true);
+      loadingLine.classList.remove('active');
+      statusText.textContent = currentDest;
+      isLoading = false;
+    }
+
+    function renderPage(html, final = false) {
+      const doc = pageFrame.contentDocument;
+      doc.open();
+      doc.write(html);
+      if (final) doc.close();
+
+      if (final) {
+        doc.querySelectorAll('a[href]').forEach(a => {
+          a.addEventListener('click', e => {
+            e.preventDefault();
+            const href = a.getAttribute('href');
+            if (href && href !== '#') {
+              navigate(href);
+            }
+          });
+        });
+      }
+    }
+
+    // Events
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') navigate(input.value);
+    });
+
+    btnBack.addEventListener('click', () => {
+      if (historyIndex > 0) {
+        historyIndex--;
+        navigate(history[historyIndex], false);
+      }
+    });
+
+    btnForward.addEventListener('click', () => {
+      if (historyIndex < history.length - 1) {
+        historyIndex++;
+        navigate(history[historyIndex], false);
+      }
+    });
+
+    document.getElementById('btn-home').addEventListener('click', () => {
+      startPage.style.display = '';
+      pageFrame.style.display = 'none';
+      currentDest = '';
+      input.value = '';
+      document.title = 'Drift';
+      statusText.textContent = 'ready';
+      window.history.pushState({}, '', window.location.pathname);
+    });
+
+    document.querySelectorAll('.seed').forEach(el => {
+      el.addEventListener('click', () => navigate(el.dataset.dest));
+    });
+
+    document.addEventListener('keydown', e => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'l') {
+        e.preventDefault();
+        input.focus();
+        input.select();
+      }
+    });
+
+    window.addEventListener('hashchange', () => {
+      const dest = decodeURIComponent(window.location.hash.slice(1));
+      if (dest && dest !== currentDest) {
+        navigate(dest, false);
+      }
+    });
+
+    (() => {
+      const dest = decodeURIComponent(window.location.hash.slice(1));
+      if (dest) navigate(dest);
+    })();
+  </script>
+</body>
+</html>
