@@ -331,7 +331,7 @@
       const origin = historyIndex > 0 ? navHistory[historyIndex - 1] : null;
 
       try {
-        html = await streamSSE('/api/navigate', { method: 'POST', body: { destination, origin } });
+        html = await streamSSE('/api/navigate', { method: 'POST', body: { destination, origin, lang: currentLang } });
       } catch (err) {
         html = `<html><body style="font-family:sans-serif;padding:60px;background:#0a0a0f;color:#c8c8d8;text-align:center;">
           <h1 style="color:rgba(160,120,255,0.7);font-weight:300;">Lost in the void</h1>
