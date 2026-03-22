@@ -329,7 +329,10 @@
       const doc = pageFrame.contentDocument;
       doc.open();
       doc.write(html);
-      if (final) doc.close();
+      if (final) {
+        doc.write('<style>html, body { overflow-y: auto !important; height: auto !important; min-height: 100vh; }</style>');
+        doc.close();
+      }
 
       if (final) {
         doc.querySelectorAll('a[href]').forEach(a => {
