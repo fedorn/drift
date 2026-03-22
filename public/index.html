@@ -127,60 +127,32 @@
       background: #0a0a0f;
     }
 
-    /* Start page */
-    .start-page {
+    .lang-toggle {
       display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      background: radial-gradient(ellipse at 50% 40%, rgba(160, 120, 255, 0.08) 0%, #0a0a0f 70%);
-      text-align: center;
-      padding: 20px;
+      gap: 2px;
     }
 
-    .start-page .logo {
-      font-size: 64px;
-      font-weight: 200;
-      letter-spacing: 12px;
-      color: rgba(200, 180, 255, 0.9);
-      margin-bottom: 12px;
-      text-transform: uppercase;
-    }
-
-    .start-page .subtitle {
+    .lang-btn {
+      background: none;
+      border: 1px solid rgba(255, 255, 255, 0.08);
       color: rgba(255, 255, 255, 0.25);
-      font-size: 15px;
-      font-weight: 300;
-      margin-bottom: 48px;
-      letter-spacing: 1px;
-    }
-
-    .seeds {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      max-width: 640px;
-      justify-content: center;
-    }
-
-    .seed {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.07);
-      border-radius: 20px;
-      padding: 8px 20px;
+      padding: 4px 10px;
+      border-radius: 6px;
       cursor: pointer;
-      transition: all 0.3s;
-      font-size: 13px;
-      color: rgba(255, 255, 255, 0.4);
-      letter-spacing: 0.5px;
+      font-size: 12px;
+      transition: all 0.2s;
+      font-family: inherit;
     }
 
-    .seed:hover {
-      background: rgba(160, 120, 255, 0.1);
-      border-color: rgba(160, 120, 255, 0.3);
-      color: rgba(200, 180, 255, 0.9);
-      transform: translateY(-1px);
+    .lang-btn:hover {
+      color: rgba(255, 255, 255, 0.5);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .lang-btn.active {
+      color: rgba(200, 180, 255, 0.8);
+      border-color: rgba(160, 120, 255, 0.4);
+      background: rgba(160, 120, 255, 0.08);
     }
 
     .status-bar {
@@ -204,26 +176,16 @@
       <div class="input-bar">
         <input type="text" id="input" placeholder="type a place, concept, feeling, question, memory..." autofocus>
       </div>
+      <div class="lang-toggle" id="lang-toggle">
+        <button class="lang-btn active" data-lang="en">EN</button>
+        <button class="lang-btn" data-lang="ru">RU</button>
+      </div>
     </div>
     <div class="loading-line" id="loading-line"></div>
   </div>
 
   <div class="content-area">
-    <div class="start-page" id="start-page">
-      <div class="logo">drift</div>
-      <div class="subtitle">explore spaces generated from thought</div>
-      <div class="seeds">
-        <div class="seed" data-dest="a library that remembers every book you almost read">a library of almost-read books</div>
-        <div class="seed" data-dest="the feeling of 3am when everyone else is asleep">3am solitude</div>
-        <div class="seed" data-dest="a map of all the places you've been in dreams">dream cartography</div>
-        <div class="seed" data-dest="what does music look like from the inside">inside of music</div>
-        <div class="seed" data-dest="a museum of obsolete futures — things we thought 2025 would look like">obsolete futures</div>
-        <div class="seed" data-dest="the space between two thoughts">between thoughts</div>
-        <div class="seed" data-dest="a marketplace where people trade memories">memory market</div>
-        <div class="seed" data-dest="the last page of the internet">the last page</div>
-      </div>
-    </div>
-    <iframe class="page-frame" id="page-frame" sandbox="allow-same-origin" style="display:none;"></iframe>
+    <iframe class="page-frame" id="page-frame" sandbox="allow-same-origin"></iframe>
   </div>
 
   <div class="status-bar">
@@ -234,20 +196,115 @@
   <script>
     const input = document.getElementById('input');
     const pageFrame = document.getElementById('page-frame');
-    const startPage = document.getElementById('start-page');
     const loadingLine = document.getElementById('loading-line');
     const btnBack = document.getElementById('btn-back');
     const btnForward = document.getElementById('btn-forward');
     const statusText = document.getElementById('status-text');
+    const langToggle = document.getElementById('lang-toggle');
 
-    let history = [];
+    let navHistory = [];
     let historyIndex = -1;
     let currentDest = '';
     let isLoading = false;
+    let isOnLanding = true;
+    let currentLang = new URLSearchParams(window.location.search).get('lang') === 'ru' ? 'ru' : 'en';
+
+    const placeholders = {
+      en: 'type a place, concept, feeling, question, memory...',
+      ru: 'место, чувство, вопрос, воспоминание, идея...',
+    };
 
     function updateNavButtons() {
       btnBack.disabled = historyIndex <= 0;
-      btnForward.disabled = historyIndex >= history.length - 1;
+      btnForward.disabled = historyIndex >= navHistory.length - 1;
+    }
+
+    function updateLangButtons() {
+      document.querySelectorAll('.lang-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.lang === currentLang);
+      });
+      input.placeholder = placeholders[currentLang];
+    }
+
+    function updateUrl() {
+      if (isOnLanding) {
+        const params = currentLang === 'ru' ? '?lang=ru' : window.location.pathname;
+        window.history.replaceState({}, '', params);
+      }
+    }
+
+    function stripFences(s) {
+      return s.replace(/^```[\w]*\n?/, '').replace(/\n?```\s*$/, '');
+    }
+
+    async function streamSSE(url, opts = {}) {
+      const res = opts.method === 'POST'
+        ? await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(opts.body) })
+        : await fetch(url);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let html = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.error) throw new Error(data.error);
+            if (data.done) break;
+            if (data.html) {
+              html += data.html;
+              statusText.textContent = 'rendering...';
+            }
+          } catch (e) {
+            if (e.message && !e.message.includes('JSON')) throw e;
+          }
+        }
+
+        renderPage(stripFences(html));
+      }
+
+      return stripFences(html);
+    }
+
+    async function loadLanding(lang) {
+      if (isLoading) return;
+      isLoading = true;
+      isOnLanding = true;
+      currentLang = lang;
+      currentDest = '';
+      input.value = '';
+      document.title = 'Drift';
+      loadingLine.classList.add('active');
+      statusText.textContent = currentLang === 'ru' ? 'создаём пространство...' : 'generating landing...';
+      langToggle.style.display = '';
+      updateLangButtons();
+      updateUrl();
+
+      let html = '';
+      try {
+        html = await streamSSE(`/api/landing?lang=${lang}`);
+      } catch (err) {
+        html = `<html><body style="font-family:sans-serif;padding:60px;background:#0a0a0f;color:#c8c8d8;text-align:center;">
+          <h1 style="color:rgba(160,120,255,0.7);font-weight:300;">drift</h1>
+          <p style="color:rgba(255,255,255,0.3);margin-top:16px;">Could not generate landing</p>
+          <p style="color:rgba(255,255,255,0.15);margin-top:8px;">${err.message}</p>
+        </body></html>`;
+      }
+
+      renderPage(html, true);
+      loadingLine.classList.remove('active');
+      statusText.textContent = 'ready';
+      isLoading = false;
     }
 
     async function navigate(destination, pushHistory = true) {
@@ -255,6 +312,7 @@
       destination = destination.trim();
 
       isLoading = true;
+      isOnLanding = false;
       input.value = destination;
       currentDest = destination;
       document.title = `${destination} — Drift`;
@@ -262,55 +320,18 @@
       statusText.textContent = 'entering space...';
 
       if (pushHistory) {
-        history = history.slice(0, historyIndex + 1);
-        history.push(destination);
-        historyIndex = history.length - 1;
-        window.location.hash = destination;
+        navHistory = navHistory.slice(0, historyIndex + 1);
+        navHistory.push(destination);
+        historyIndex = navHistory.length - 1;
+        window.history.replaceState({}, '', '#' + encodeURIComponent(destination));
       }
       updateNavButtons();
 
-      startPage.style.display = 'none';
-      pageFrame.style.display = 'block';
-
       let html = '';
-      const origin = historyIndex > 0 ? history[historyIndex - 1] : null;
+      const origin = historyIndex > 0 ? navHistory[historyIndex - 1] : null;
 
       try {
-        const res = await fetch('/api/navigate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ destination, origin }),
-        });
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop();
-
-          for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.error) throw new Error(data.error);
-              if (data.done) break;
-              if (data.html) {
-                html += data.html;
-                statusText.textContent = 'rendering...';
-              }
-            } catch (e) {
-              if (e.message && !e.message.includes('JSON')) throw e;
-            }
-          }
-
-          renderPage(html);
-        }
+        html = await streamSSE('/api/navigate', { method: 'POST', body: { destination, origin } });
       } catch (err) {
         html = `<html><body style="font-family:sans-serif;padding:60px;background:#0a0a0f;color:#c8c8d8;text-align:center;">
           <h1 style="color:rgba(160,120,255,0.7);font-weight:300;">Lost in the void</h1>
@@ -355,29 +376,30 @@
     btnBack.addEventListener('click', () => {
       if (historyIndex > 0) {
         historyIndex--;
-        navigate(history[historyIndex], false);
+        navigate(navHistory[historyIndex], false);
       }
     });
 
     btnForward.addEventListener('click', () => {
-      if (historyIndex < history.length - 1) {
+      if (historyIndex < navHistory.length - 1) {
         historyIndex++;
-        navigate(history[historyIndex], false);
+        navigate(navHistory[historyIndex], false);
       }
     });
 
     document.getElementById('btn-home').addEventListener('click', () => {
-      startPage.style.display = '';
-      pageFrame.style.display = 'none';
-      currentDest = '';
-      input.value = '';
-      document.title = 'Drift';
-      statusText.textContent = 'ready';
-      window.history.pushState({}, '', window.location.pathname);
+      navHistory = [];
+      historyIndex = -1;
+      updateNavButtons();
+      loadLanding(currentLang);
     });
 
-    document.querySelectorAll('.seed').forEach(el => {
-      el.addEventListener('click', () => navigate(el.dataset.dest));
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.lang !== currentLang) {
+          loadLanding(btn.dataset.lang);
+        }
+      });
     });
 
     document.addEventListener('keydown', e => {
@@ -388,16 +410,15 @@
       }
     });
 
-    window.addEventListener('hashchange', () => {
-      const dest = decodeURIComponent(window.location.hash.slice(1));
-      if (dest && dest !== currentDest) {
-        navigate(dest, false);
-      }
-    });
-
+    // Init
     (() => {
-      const dest = decodeURIComponent(window.location.hash.slice(1));
-      if (dest) navigate(dest);
+      updateLangButtons();
+      const hash = decodeURIComponent(window.location.hash.slice(1));
+      if (hash) {
+        navigate(hash);
+      } else {
+        loadLanding(currentLang);
+      }
     })();
   </script>
 </body>
