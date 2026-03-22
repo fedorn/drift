@@ -359,7 +359,7 @@
 
       if (final) {
         doc.addEventListener('click', e => {
-          const a = e.target.closest('a[href]');
+          const a = e.target.closest('[href]');
           if (a) {
             e.preventDefault();
             const href = a.getAttribute('href');
