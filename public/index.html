@@ -358,14 +358,15 @@
       }
 
       if (final) {
-        doc.querySelectorAll('a[href]').forEach(a => {
-          a.addEventListener('click', e => {
+        doc.addEventListener('click', e => {
+          const a = e.target.closest('a[href]');
+          if (a) {
             e.preventDefault();
             const href = a.getAttribute('href');
             if (href && href !== '#') {
               navigate(href);
             }
-          });
+          }
         });
       }
     }
